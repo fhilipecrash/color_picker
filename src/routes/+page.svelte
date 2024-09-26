@@ -8,13 +8,15 @@
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
 
-    saturation = Math.round((x / 446) * 100);
+    saturation = Math.round(Math.min(100, Math.max(0, (x / 446) * 100)));
 
     if (y < 114) {
       lightness = Math.round(100 - (x / 446) * 50);
     } else {
       lightness = Math.round(50 - ((y - 114) / 114) * 50);
     }
+
+    lightness = Math.min(100, Math.max(0, lightness)); // Limitar lightness para 0-100
   }
 
   function hslToHex(h: number, s: number, l: number) {
@@ -29,25 +31,32 @@
   }
 
   function hslToHsv(h: number, s: number, l: number) {
-    const v = (l + (s * Math.min(l, 1 - l)) / 100);
-    const newS = v ? (2 - (2 * l) / v) * 100 : 0;
-    return { h, s: newS, v: v * 100 };
+    const lDecimal = l / 100;
+    const c = s / 100 * (1 - Math.abs(2 * lDecimal - 1)); // Chroma
+    const v = lDecimal + c; // Value
+    const newS = v ? Math.round((c / v) * 100) : 0; // Saturation
+
+    return {
+      h: Math.round(h) % 360, // Ajustar o hue para ficar entre 0 e 360
+      s: Math.min(100, Math.max(0, newS)), // Limitar saturation para 0-100
+      v: Math.min(100, Math.max(0, Math.round(v * 100))) // Limitar value para 0-100
+    };
   }
 
   function hslToCmyk(h: number, s: number, l: number) {
     const { r, g, b } = hslToRgb(h, s, l);
 
-    const c = 1 - r;
-    const m = 1 - g;
-    const y = 1 - b;
-    
+    const c = 1 - r / 255;
+    const m = 1 - g / 255;
+    const y = 1 - b / 255;
+
     const k = Math.min(c, Math.min(m, y));
     
     return {
-      c: (c - k) / (1 - k) * 100,
-      m: (m - k) / (1 - k) * 100,
-      y: (y - k) / (1 - k) * 100,
-      k: k * 100
+      c: Math.round(((c - k) / (1 - k)) * 100),
+      m: Math.round(((m - k) / (1 - k)) * 100),
+      y: Math.round(((y - k) / (1 - k)) * 100),
+      k: Math.round(k * 100)
     };
   }
 
@@ -80,7 +89,30 @@
   .main {
     height: 100vh;
     display: flex;
+    flex-direction: column;
     justify-content: center;
+    align-items: center;
+  }
+
+  .title {
+    font-size: 5rem;
+    margin-bottom: 1rem;
+    font-family: 'Courier New', Courier, monospace;
+  }
+
+  .btn {
+    background-color: #FFF;
+    border: 1px solid #000;
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    margin: 0.5rem;
+    cursor: pointer;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+  }
+
+  .colors {
+    display: flex;
     align-items: center;
   }
 
@@ -93,7 +125,7 @@
     border-radius: 0.5rem;
     padding: 1rem;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-    width: 40rem;
+    width: 45rem;
     height: 30rem;
   }
 
@@ -106,6 +138,8 @@
   }
 
   .slider {
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
     width: 100%;
   }
 
@@ -156,13 +190,15 @@
     width: 1rem;
   }
 
-  input[type="range"]:focus::-moz-range-thumb{
+  input[type="range"]:focus::-moz-range-thumb {
     outline: 3px solid #3d3846;
     outline-offset: 0.125rem;
   }
 </style>
 
 <div class="main" style="background-color: {color};">
+  <h1 class="title">Color Picker</h1>
+
   <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div class="container">
     <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -176,11 +212,22 @@
 
     <input type="range" min="0" max="360" bind:value={hue} class="slider" />
 
-    <p>RGB: {rgb.r}, {rgb.g}, {rgb.b}</p>
-    <p>HSL: {hue}, {saturation}%, {lightness}%</p>
-    <p>HEX: <span>{hexColor}</span></p>
-    <p>HSV: {hsv.h}, {hsv.s}%, {hsv.v}%</p>
-    <p>CMYK: {cmyk.c.toFixed(2)}%, {cmyk.m.toFixed(2)}%, {cmyk.y.toFixed(2)}%, {cmyk.k.toFixed(2)}%</p>
-    
+    <button class="btn" on:click={() => copyToClipboard(hexColor)}>
+      <p>HEX: <span>{hexColor}</span></p>
+    </button>
+    <div class="colors">
+      <button class="btn" on:click={() => copyToClipboard(`rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`)}>
+        <p>RGB: {rgb.r}, {rgb.g}, {rgb.b}</p>
+      </button>
+      <button class="btn" on:click={() => copyToClipboard(`hsl(${hue}, ${saturation}%, ${lightness}%)`)}>
+        <p>HSL: {hue}, {saturation}%, {lightness}%</p>
+      </button>
+      <button class="btn" on:click={() => copyToClipboard(`hsv(${hsv.h}, ${hsv.s}%, ${hsv.v}%)`)}>
+        <p>HSV: {hsv.h}, {hsv.s}%, {hsv.v}%</p>
+      </button>
+      <button class="btn" on:click={() => copyToClipboard(`cmyk(${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%)`)}>
+        <p>CMYK: {cmyk.c}%, {cmyk.m}%, {cmyk.y}%, {cmyk.k}%</p>
+      </button>
+    </div>
   </div>
 </div>
