@@ -2,11 +2,18 @@
   let hue = 120;
   let saturation = 100;
   let lightness = 50;
+  let clickX = 0;
+  let clickY = 0;
+  let lastClick = false;
 
   function handleClick(event: MouseEvent) {
     const rect = (event.target as HTMLDivElement).getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
+
+    clickX = x;
+    clickY = y;
+    lastClick = true;
 
     saturation = Math.round(Math.min(100, Math.max(0, (x / 446) * 100)));
 
@@ -85,6 +92,46 @@
   $: rgb = hslToRgb(hue, saturation, lightness);
 </script>
 
+<div class="main" style="background-color: {color};">
+  <h1 class="title">Color Picker</h1>
+
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
+  <div class="container">
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <div class="color-selector"
+      on:click={handleClick}
+      style="background-image:
+        linear-gradient(to bottom, transparent 0%, black 100%),
+        linear-gradient(90deg, rgba(79, 70, 229, 0%) 0%, hsl({hue}, 100%, 50%) 100%),
+        linear-gradient(0deg, #000000 0%, rgba(196, 196, 196, 0%) 100%);"
+    >
+      {#if lastClick}
+        <div class="click-indicator" style="top: {clickY}px; left: {clickX}px;"></div>
+      {/if}
+    </div>
+
+    <input type="range" min="0" max="360" bind:value={hue} class="slider" />
+
+    <button class="btn" on:click={() => copyToClipboard(hexColor)}>
+      <p>HEX: <span>{hexColor}</span></p>
+    </button>
+    <div class="colors">
+      <button class="btn" on:click={() => copyToClipboard(`rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`)}>
+        <p>RGB: {rgb.r}, {rgb.g}, {rgb.b}</p>
+      </button>
+      <button class="btn" on:click={() => copyToClipboard(`hsl(${hue}, ${saturation}%, ${lightness}%)`)}>
+        <p>HSL: {hue}, {saturation}%, {lightness}%</p>
+      </button>
+      <button class="btn" on:click={() => copyToClipboard(`hsv(${hsv.h}, ${hsv.s}%, ${hsv.v}%)`)}>
+        <p>HSV: {hsv.h}, {hsv.s}%, {hsv.v}%</p>
+      </button>
+      <button class="btn" on:click={() => copyToClipboard(`cmyk(${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%)`)}>
+        <p>CMYK: {cmyk.c}%, {cmyk.m}%, {cmyk.y}%, {cmyk.k}%</p>
+      </button>
+    </div>
+  </div>
+</div>
+
 <style>
   .main {
     height: 100vh;
@@ -135,6 +182,16 @@
     aspect-ratio: 1/1;
     position: relative;
     cursor: crosshair;
+  }
+
+  .click-indicator {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: white;
+    border: 2px solid black;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
   }
 
   .slider {
@@ -195,39 +252,3 @@
     outline-offset: 0.125rem;
   }
 </style>
-
-<div class="main" style="background-color: {color};">
-  <h1 class="title">Color Picker</h1>
-
-  <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div class="container">
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <div class="color-selector"
-      on:click={handleClick}
-      style="background-image:
-        linear-gradient(to bottom, transparent 0%, black 100%),
-        linear-gradient(90deg, rgba(79, 70, 229, 0%) 0%, hsl({hue}, 100%, 50%) 100%),
-        linear-gradient(0deg, #000000 0%, rgba(196, 196, 196, 0%) 100%);">
-    </div>
-
-    <input type="range" min="0" max="360" bind:value={hue} class="slider" />
-
-    <button class="btn" on:click={() => copyToClipboard(hexColor)}>
-      <p>HEX: <span>{hexColor}</span></p>
-    </button>
-    <div class="colors">
-      <button class="btn" on:click={() => copyToClipboard(`rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`)}>
-        <p>RGB: {rgb.r}, {rgb.g}, {rgb.b}</p>
-      </button>
-      <button class="btn" on:click={() => copyToClipboard(`hsl(${hue}, ${saturation}%, ${lightness}%)`)}>
-        <p>HSL: {hue}, {saturation}%, {lightness}%</p>
-      </button>
-      <button class="btn" on:click={() => copyToClipboard(`hsv(${hsv.h}, ${hsv.s}%, ${hsv.v}%)`)}>
-        <p>HSV: {hsv.h}, {hsv.s}%, {hsv.v}%</p>
-      </button>
-      <button class="btn" on:click={() => copyToClipboard(`cmyk(${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%)`)}>
-        <p>CMYK: {cmyk.c}%, {cmyk.m}%, {cmyk.y}%, {cmyk.k}%</p>
-      </button>
-    </div>
-  </div>
-</div>
