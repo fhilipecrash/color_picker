@@ -4,26 +4,44 @@
   let lightness = 50;
   let clickX = 0;
   let clickY = 0;
-  let lastClick = false;
+  let isDragging = false;
 
-  function handleClick(event: MouseEvent) {
+  function handleClickOrDrag(event: MouseEvent) {
     const rect = (event.target as HTMLDivElement).getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
 
     clickX = x;
     clickY = y;
-    lastClick = true;
 
-    saturation = Math.round(Math.min(100, Math.max(0, (x / 446) * 100)));
+    saturation = Math.round(Math.min(100, Math.max(0, (x / rect.width) * 100)));
 
-    if (y < 114) {
-      lightness = Math.round(100 - (x / 446) * 50);
+    if (y < rect.height / 2) {
+      lightness = Math.round(100 - (x / rect.width) * 50);
     } else {
-      lightness = Math.round(50 - ((y - 114) / 114) * 50);
+      lightness = Math.round(50 - ((y - rect.height / 2) / (rect.height / 2)) * 50);
     }
 
     lightness = Math.min(100, Math.max(0, lightness)); // Limitar lightness para 0-100
+  }
+
+  function handleMouseDown(event: MouseEvent) {
+    isDragging = true;
+    handleClickOrDrag(event);
+  }
+
+  function handleMouseMove(event: MouseEvent) {
+    if (isDragging) {
+      handleClickOrDrag(event);
+    }
+  }
+
+  function handleMouseUp() {
+    isDragging = false;
+  }
+
+  function handleMouseLeave() {
+    isDragging = false;
   }
 
   function hslToHex(h: number, s: number, l: number) {
@@ -90,6 +108,8 @@
   $: hsv = hslToHsv(hue, saturation, lightness);
   $: cmyk = hslToCmyk(hue, saturation, lightness);
   $: rgb = hslToRgb(hue, saturation, lightness);
+  $: console.log(clickX);
+  $: console.log(clickY);
 </script>
 
 <div class="main" style="background-color: {color};">
@@ -99,15 +119,16 @@
   <div class="container">
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <div class="color-selector"
-      on:click={handleClick}
+    on:mousedown={handleMouseDown}
+    on:mousemove={handleMouseMove}
+    on:mouseup={handleMouseUp}
+    on:mouseleave={handleMouseLeave}
       style="background-image:
         linear-gradient(to bottom, transparent 0%, black 100%),
         linear-gradient(90deg, rgba(79, 70, 229, 0%) 0%, hsl({hue}, 100%, 50%) 100%),
         linear-gradient(0deg, #000000 0%, rgba(196, 196, 196, 0%) 100%);"
     >
-      {#if lastClick}
-        <div class="click-indicator" style="top: {clickY}px; left: {clickX}px;"></div>
-      {/if}
+      <div class="click-indicator" style="top: {clickY}px; left: {clickX}px;"></div>
     </div>
 
     <input type="range" min="0" max="360" bind:value={hue} class="slider" />
