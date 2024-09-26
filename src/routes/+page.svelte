@@ -7,22 +7,22 @@
   let isDragging = false;
 
   function handleClickOrDrag(event: MouseEvent) {
-    const rect = (event.target as HTMLDivElement).getBoundingClientRect();
+    const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
 
-    clickX = x;
-    clickY = y;
+    // Limitar clickX e clickY aos limites do retângulo
+    clickX = Math.max(0, Math.min(rect.width, x));
+    clickY = Math.max(0, Math.min(rect.height, y));
 
-    saturation = Math.round(Math.min(100, Math.max(0, (x / rect.width) * 100)));
+    // Calcular saturação com base na posição horizontal
+    saturation = Math.round((clickX / rect.width) * 100);
 
-    if (y < rect.height / 2) {
-      lightness = Math.round(100 - (x / rect.width) * 50);
-    } else {
-      lightness = Math.round(50 - ((y - rect.height / 2) / (rect.height / 2)) * 50);
-    }
+    // Calcular lightness com base na posição vertical
+    lightness = Math.round(100 - (clickY / rect.height) * 100);
 
-    lightness = Math.min(100, Math.max(0, lightness)); // Limitar lightness para 0-100
+    // Garantir que lightness esteja entre 0 e 100
+    lightness = Math.min(100, Math.max(0, lightness));
   }
 
   function handleMouseDown(event: MouseEvent) {
@@ -59,11 +59,13 @@
     const lDecimal = l / 100;
     const c = s / 100 * (1 - Math.abs(2 * lDecimal - 1)); // Chroma
     const v = lDecimal + c; // Value
-    const newS = v ? Math.round((c / v) * 100) : 0; // Saturation
+
+    // Para saturação em HSV, precisamos calcular da seguinte forma
+    const newS = v === 0 ? 0 : (c / v) * 100;
 
     return {
       h: Math.round(h) % 360, // Ajustar o hue para ficar entre 0 e 360
-      s: Math.min(100, Math.max(0, newS)), // Limitar saturation para 0-100
+      s: Math.min(100, Math.max(0, Math.round(newS))), // Limitar saturation para 0-100
       v: Math.min(100, Math.max(0, Math.round(v * 100))) // Limitar value para 0-100
     };
   }
@@ -108,8 +110,6 @@
   $: hsv = hslToHsv(hue, saturation, lightness);
   $: cmyk = hslToCmyk(hue, saturation, lightness);
   $: rgb = hslToRgb(hue, saturation, lightness);
-  $: console.log(clickX);
-  $: console.log(clickY);
 </script>
 
 <div class="main" style="background-color: {color};">
